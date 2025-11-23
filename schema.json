@@ -1,0 +1,49 @@
+{
+  "company": "",
+  "goal": "",
+  "sections": {
+    "account_overview": {
+      "client_snapshot": "",
+      "history_and_milestones": "",
+      "current_challenges": "",
+      "relationship_strength": null,
+      "opportunities_for_growth": "",
+      "key_contacts": []
+    },
+    "objectives": [
+      {
+        "goal_title": "",
+        "success_metrics": "",
+        "aligned_offerings": ""
+      }
+    ],
+    "solutions": [
+      {
+        "solution_title": "",
+        "matched_goal": "",
+        "tailored_approach": "",
+        "success_visualization": ""
+      }
+    ],
+    "change_management": {
+      "forces_for_change": [],
+      "forces_against_change": [],
+      "stakeholder_engagement": "",
+      "training_support": "",
+      "quick_wins": []
+    },
+    "implementation": {
+      "final_checks": "",
+      "stakeholder_buy_in": "",
+      "kickoff_plan": "",
+      "monitoring_plan": ""
+    },
+    "review_and_optimize": {
+      "review_schedule": "",
+      "feedback_collection": "",
+      "progress_assessment": "",
+      "lessons_learned": "",
+      "adjustments": ""
+    }
+  }
+}

@@ -1,0 +1,25 @@
+# Web Framework
+fastapi==0.121.3
+uvicorn[standard]==0.32.1
+
+# LangChain & AI
+langgraph==1.0.3
+langchain-core==1.1.0
+langchain-openai==1.0.3
+openai==2.8.1
+
+# HTTP & Network
+httpx==0.28.1
+
+# Data Validation
+pydantic==2.12.4
+
+# Environment & Configuration
+python-dotenv==1.2.1
+
+# Vector Store & Embeddings
+faiss-cpu==1.9.0
+numpy==1.26.4
+
+# Optional: For better performance
+# orjson==3.11.4  # Faster JSON parsing
