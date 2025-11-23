@@ -227,28 +227,215 @@ export function ArtifactCanvas({ planId, refreshTrigger = 0 }: ArtifactCanvasPro
             yPos = (doc as any).lastAutoTable.finalY + 10;
 
         } else if (Array.isArray(section.content)) {
-            const contentText = section.content.map((item: any) => {
-                if (typeof item === 'string') return `• ${item}`;
-                if (typeof item === 'object' && item !== null) {
-                     if ('title' in item && 'url' in item) {
-                         return `• ${item.title}\n  ${item.url}`;
-                     }
-                     return `• ${Object.entries(item).map(([k,v]) => `${k}: ${v}`).join(', ')}`;
+            section.content.forEach((item: any) => {
+                // Check for page break before each item
+                if (yPos > doc.internal.pageSize.getHeight() - 30) {
+                    doc.addPage();
+                    yPos = 20;
                 }
-                return JSON.stringify(item);
-            }).join('\n\n');
 
-            const splitText = doc.splitTextToSize(contentText, contentWidth);
+                if (typeof item === 'string') {
+                    // Simple string item - bullet point
+                    const bulletText = doc.splitTextToSize(`• ${item}`, contentWidth - 5);
+                    doc.text(bulletText, margin + 5, yPos);
+                    yPos += (bulletText.length * 5) + 3;
+                } else if (typeof item === 'object' && item !== null) {
+                    if ('title' in item && 'url' in item) {
+                        // Search result or link with title and URL
+                        doc.setFont("helvetica", "bold");
+                        const titleText = doc.splitTextToSize(`• ${item.title}`, contentWidth - 5);
+                        doc.text(titleText, margin + 5, yPos);
+                        yPos += (titleText.length * 5) + 2;
+                        
+                        doc.setFont("helvetica", "normal");
+                        doc.setTextColor(60, 60, 200); // Blue for URL
+                        const urlText = doc.splitTextToSize(item.url, contentWidth - 10);
+                        doc.text(urlText, margin + 10, yPos);
+                        doc.setTextColor(0); // Reset to black
+                        yPos += (urlText.length * 5) + 2;
+                        
+                        if (item.snippet) {
+                            doc.setTextColor(100);
+                            const snippetText = doc.splitTextToSize(item.snippet, contentWidth - 10);
+                            doc.text(snippetText, margin + 10, yPos);
+                            doc.setTextColor(0);
+                            yPos += (snippetText.length * 5) + 5;
+                        } else {
+                            yPos += 5;
+                        }
+                    } else {
+                        // Generic object - format as key-value pairs
+                        doc.text('•', margin + 5, yPos);
+                        yPos += 5;
+                        
+                        Object.entries(item).forEach(([key, value]) => {
+                            if (yPos > doc.internal.pageSize.getHeight() - 20) {
+                                doc.addPage();
+                                yPos = 20;
+                            }
+                            
+                            doc.setFont("helvetica", "bold");
+                            doc.text(`${key.replace(/_/g, ' ')}:`, margin + 10, yPos);
+                            doc.setFont("helvetica", "normal");
+                            
+                            const valueStr = typeof value === 'string' ? value : JSON.stringify(value);
+                            const valueText = doc.splitTextToSize(valueStr, contentWidth - 35);
+                            doc.text(valueText, margin + 10 + doc.getTextWidth(`${key.replace(/_/g, ' ')}: `), yPos);
+                            yPos += (valueText.length * 5) + 2;
+                        });
+                        yPos += 3;
+                    }
+                } else {
+                    // Fallback for other types
+                    const itemText = doc.splitTextToSize(`• ${JSON.stringify(item)}`, contentWidth - 5);
+                    doc.text(itemText, margin + 5, yPos);
+                    yPos += (itemText.length * 5) + 3;
+                }
+            });
             
-            if (yPos + (splitText.length * 5) > doc.internal.pageSize.getHeight() - 20) {
-                 doc.addPage();
-                 yPos = 20;
-            }
-            
-            doc.text(splitText, margin, yPos);
-            yPos += (splitText.length * 5) + 10;
+            yPos += 5; // Extra spacing after list
 
+        } else if (typeof section.content === 'object' && section.content !== null) {
+            // Object with key-value pairs (not already handled by table logic above)
+            Object.entries(section.content).forEach(([key, value]) => {
+                if (yPos > doc.internal.pageSize.getHeight() - 30) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+
+                // Key header
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(11);
+                const keyText = key.replace(/_/g, ' ').toUpperCase();
+                doc.text(keyText, margin, yPos);
+                yPos += 6;
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "normal");
+
+                if (Array.isArray(value)) {
+                    // Value is an array - render as list
+                    value.forEach((item: any) => {
+                        if (yPos > doc.internal.pageSize.getHeight() - 20) {
+                            doc.addPage();
+                            yPos = 20;
+                        }
+
+                        if (typeof item === 'string') {
+                            const bulletText = doc.splitTextToSize(`• ${item}`, contentWidth - 5);
+                            doc.text(bulletText, margin + 5, yPos);
+                            yPos += (bulletText.length * 5) + 3;
+                        } else if (typeof item === 'object' && item !== null) {
+                            if ('title' in item && 'url' in item) {
+                                doc.setFont("helvetica", "bold");
+                                const titleText = doc.splitTextToSize(`• ${item.title}`, contentWidth - 5);
+                                doc.text(titleText, margin + 5, yPos);
+                                yPos += (titleText.length * 5) + 2;
+                                
+                                doc.setFont("helvetica", "normal");
+                                doc.setTextColor(60, 60, 200);
+                                const urlText = doc.splitTextToSize(item.url, contentWidth - 10);
+                                doc.text(urlText, margin + 10, yPos);
+                                doc.setTextColor(0);
+                                yPos += (urlText.length * 5) + 2;
+                                
+                                if (item.snippet) {
+                                    doc.setTextColor(100);
+                                    const snippetText = doc.splitTextToSize(item.snippet, contentWidth - 10);
+                                    doc.text(snippetText, margin + 10, yPos);
+                                    doc.setTextColor(0);
+                                    yPos += (snippetText.length * 5) + 5;
+                                } else {
+                                    yPos += 5;
+                                }
+                            } else {
+                                doc.text('•', margin + 5, yPos);
+                                yPos += 5;
+                                
+                                Object.entries(item).forEach(([k, v]) => {
+                                    if (yPos > doc.internal.pageSize.getHeight() - 20) {
+                                        doc.addPage();
+                                        yPos = 20;
+                                    }
+                                    
+                                    doc.setFont("helvetica", "bold");
+                                    doc.text(`${k.replace(/_/g, ' ')}:`, margin + 10, yPos);
+                                    doc.setFont("helvetica", "normal");
+                                    
+                                    const valueStr = typeof v === 'string' ? v : JSON.stringify(v);
+                                    const valueText = doc.splitTextToSize(valueStr, contentWidth - 35);
+                                    doc.text(valueText, margin + 10 + doc.getTextWidth(`${k.replace(/_/g, ' ')}: `), yPos);
+                                    yPos += (valueText.length * 5) + 2;
+                                });
+                                yPos += 3;
+                            }
+                        } else {
+                            const itemText = doc.splitTextToSize(`• ${JSON.stringify(item)}`, contentWidth - 5);
+                            doc.text(itemText, margin + 5, yPos);
+                            yPos += (itemText.length * 5) + 3;
+                        }
+                    });
+                } else if (typeof value === 'object' && value !== null) {
+                    // Nested object - render key-value pairs
+                    Object.entries(value).forEach(([nestedKey, nestedValue]) => {
+                        if (yPos > doc.internal.pageSize.getHeight() - 20) {
+                            doc.addPage();
+                            yPos = 20;
+                        }
+                        
+                        doc.setFont("helvetica", "bold");
+                        doc.text(`${nestedKey.replace(/_/g, ' ')}:`, margin + 5, yPos);
+                        doc.setFont("helvetica", "normal");
+                        
+                        const valueStr = typeof nestedValue === 'string' ? nestedValue : JSON.stringify(nestedValue);
+                        const valueText = doc.splitTextToSize(valueStr, contentWidth - 30);
+                        doc.text(valueText, margin + 5 + doc.getTextWidth(`${nestedKey.replace(/_/g, ' ')}: `), yPos);
+                        yPos += (valueText.length * 5) + 2;
+                    });
+                } else {
+                    // Simple string or primitive value
+                    let valueStr = typeof value === 'string' ? value : JSON.stringify(value);
+                    
+                    // Try to parse if it looks like a JSON array string
+                    if (typeof value === 'string' && value.trim().startsWith('[') && value.trim().endsWith(']')) {
+                        try {
+                            const parsedArray = JSON.parse(value);
+                            if (Array.isArray(parsedArray)) {
+                                // Render as bullet list
+                                parsedArray.forEach((item: any) => {
+                                    if (yPos > doc.internal.pageSize.getHeight() - 20) {
+                                        doc.addPage();
+                                        yPos = 20;
+                                    }
+                                    const itemStr = typeof item === 'string' ? item : JSON.stringify(item);
+                                    const bulletText = doc.splitTextToSize(`• ${itemStr}`, contentWidth - 10);
+                                    doc.text(bulletText, margin + 10, yPos);
+                                    yPos += (bulletText.length * 5) + 3;
+                                });
+                                yPos += 2;
+                            } else {
+                                // Not an array after all, render as text
+                                const valueText = doc.splitTextToSize(valueStr, contentWidth - 5);
+                                doc.text(valueText, margin + 5, yPos);
+                                yPos += (valueText.length * 5) + 5;
+                            }
+                        } catch (e) {
+                            // Parsing failed, render as regular text
+                            const valueText = doc.splitTextToSize(valueStr, contentWidth - 5);
+                            doc.text(valueText, margin + 5, yPos);
+                            yPos += (valueText.length * 5) + 5;
+                        }
+                    } else {
+                        // Regular string value
+                        const valueText = doc.splitTextToSize(valueStr, contentWidth - 5);
+                        doc.text(valueText, margin + 5, yPos);
+                        yPos += (valueText.length * 5) + 5;
+                    }
+                }
+
+                yPos += 5; // Extra spacing between keys
+            });
         } else {
+            // Fallback for string or other types
             let contentText = "";
             if (typeof section.content === 'string') {
                 contentText = section.content.replace(/[#*`]/g, ''); 
