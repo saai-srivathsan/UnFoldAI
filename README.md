@@ -7,10 +7,7 @@ UnFoldAI is an intelligent research and account-planning assistant designed to h
 ## 2. Key Features
 
 UnFoldAI is designed to behave as an adaptive research assistant capable of conducting multi-step investigations, synthesizing information, and producing structured account plans while maintaining a natural conversational experience. The following core capabilities align with the evaluation criteria.
-
----
-
-### 2.1 Feature Summary
+----
 
 | Feature Area | Description |
 |--------------|-------------|
@@ -24,26 +21,3 @@ UnFoldAI is designed to behave as an adaptive research assistant capable of cond
 | Controlled Editing Workflow | Supports append, replace, merge, delete, and move operations using JSON-based update commands. |
 
 ---
-
-### 2.2 Behavioral Intelligence and Adaptation
-
-UnFoldAI adapts to the user’s communication style implicitly through contextual cues rather than explicit selection. The system adjusts its level of detail, number of clarifying questions, and conversational tone based on inferred user type. This improves usability across a range of interaction patterns.
-
----
-
-### 2.3 Research Workflow Overview
-
-The research process is executed in structured phases, with explicit tool-based reasoning and visible progress updates.
-
-```mermaid
-flowchart TD
-    A[User Request] --> B[Intent & Persona Interpretation]
-    B --> C[Research Strategy Planning]
-    C --> D{Research Mode}
-    D -->|Single Query| E[Quick Web Search]
-    D -->|Multi-step| F[Multi-Stage Research and Analysis]
-    E --> G[Document Integration (Optional)]
-    F --> G[Document Integration (Optional)]
-    G --> H[Conflict Detection & Resolution]
-    H --> I[Structured Account Plan Update]
-    I --> J[User Review & Iteration]
