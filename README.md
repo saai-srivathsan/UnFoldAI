@@ -7,7 +7,6 @@ UnFoldAI is an intelligent research and account-planning assistant designed to h
 ## 2. Key Features
 
 UnFoldAI is designed to behave as an adaptive research assistant capable of conducting multi-step investigations, synthesizing information, and producing structured account plans while maintaining a natural conversational experience. The following core capabilities align with the evaluation criteria.
-----
 
 | Feature Area | Description |
 |--------------|-------------|
