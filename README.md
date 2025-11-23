@@ -30,6 +30,8 @@ UnFoldAI is an intelligent research and account-planning assistant designed to h
 
 # System Architecture
 
+
+
 ```mermaid
 flowchart TB
     %% User Layer
@@ -45,15 +47,24 @@ flowchart TB
     subgraph Backend["⚙️ FastAPI Backend"]
         direction TB
         API["REST API Layer"]
-        FileHandler["File Upload &<br/>Reference System"]
+        FileHandler["File Upload &<br/>Ingestion Handler"]
         SessionManager["Session Manager<br/>+ Versioning"]
         PlanEngine["Plan Update Engine<br/>(JSON Protocol)"]
     end
     
+    %% RAG & Knowledge Base (NEW)
+    subgraph KnowledgeBase["🧠 RAG & Knowledge Base"]
+        direction TB
+        DocProcessor["Document Chunking<br/>& Processing"]
+        EmbeddingSvc["Embedding Service<br/>(OpenAI)"]
+        FAISS[("FAISS<br/>Vector Store")]
+    end
+
     %% Orchestration
     subgraph Orchestrator["🤖 LangGraph Agent Orchestration"]
         direction TB
         Control{"Determine<br/>Next Action"}
+        RetrievalNode["RAG Retrieval Node<br/>(Query FAISS)"]
         ConvNode["Conversation Node<br/>(GPT-4o)"]
         ResearchNode["Research Node<br/>(Perplexity API)"]
         ConflictResolver["Conflict Detection<br/>& Resolution"]
@@ -66,34 +77,51 @@ flowchart TB
         VersionHistory["Historical<br/>Snapshots"]
         Sources["Research Source<br/>Registry"]
         Conflicts["Conflict<br/>Records"]
-        UploadedFiles["Attached Files<br/>Metadata"]
+        FileMeta["File Metadata<br/>(SQL/NoSQL)"]
     end
     
     %% External Services
     subgraph External["🌐 External Systems"]
         direction TB
         Perplexity["Perplexity<br/>Web Search"]
-        OpenAIFiles["OpenAI<br/>Files API"]
+        OpenAI["OpenAI API<br/>(LLM & Embeddings)"]
         Deepgram["Deepgram<br/>TTS"]
     end
     
-    %% Connections
+    %% Connections - User Flow
     User -->|Text or Voice| UI
     UI -->|Message + Context| API
     
+    %% Backend Flow
     API --> SessionManager
     API --> Orchestrator
     
-    SessionManager --> Control
-    Control -->|Research needed| ResearchNode
-    Control -->|Generate response| ConvNode
+    %% Ingestion Flow (New)
+    FileHandler -->|Raw File| DocProcessor
+    DocProcessor -->|Text Chunks| EmbeddingSvc
+    EmbeddingSvc -->|Vectors| FAISS
+    FileHandler -->|Ref ID| FileMeta
+    EmbeddingSvc -.->|Request| OpenAI
     
-    ResearchNode --> ConflictResolver
+    %% Orchestration Flow
+    SessionManager --> Control
+    
+    Control -->|Local Context Needed| RetrievalNode
+    Control -->|External Info Needed| ResearchNode
+    Control -->|Direct Response| ConvNode
+    
+    RetrievalNode -->|Context Blocks| ConvNode
+    ResearchNode -->|Web Context| ConflictResolver
+    
     ConflictResolver --> ConvNode
     ConvNode -->|Structured JSON| API
     
+    %% RAG Retrieval Logic
+    RetrievalNode -->|Similarity Search| FAISS
+    FAISS -->|Top-K Chunks| RetrievalNode
+    
+    %% State Management
     SessionManager --> PlanState
-    SessionManager --> UploadedFiles
     SessionManager --> VersionHistory
     
     ResearchNode --> Sources
@@ -103,10 +131,8 @@ flowchart TB
     
     PlanEngine --> PlanState
     
-    FileHandler --> OpenAIFiles
     UI --> Deepgram
 ```
-
 
 ## Architecture Overview
 
@@ -126,7 +152,7 @@ UnFoldAI is designed using a modular, layered architecture that balances usabili
 ### **Backend Layer**
 
 - **FastAPI** — core REST service layer  
-- **File Handler** — upload, manage, and reference external documents  
+- **File Handler** — uploads, processes, and embeds documents for retrieval  
 - **Session Manager** — maintains per-session state, plan versions, and metadata  
 - **Plan Engine** — applies structured JSON updates to the account plan  
 
@@ -135,6 +161,7 @@ UnFoldAI is designed using a modular, layered architecture that balances usabili
 ### **Orchestration Layer**
 
 - **LangGraph Agent** — central reasoning and control orchestrator  
+- **Retrieval Node (FAISS)** — queries local vector store for document context  
 - **Conversation Node (GPT-4o)** — handles natural language understanding and structured responses  
 - **Research Node (Perplexity API)** — retrieves real-world data during analysis  
 - **Conflict Resolver** — detects contradictory data and initiates resolution loops  
@@ -144,6 +171,7 @@ UnFoldAI is designed using a modular, layered architecture that balances usabili
 ### **Storage Layer**
 
 - **Account Plan State** — canonical structured artifact  
+- **Vector Store (FAISS)** — local index for high-speed similarity search  
 - **Version History** — time-travel model of edits  
 - **Source Registry** — consolidated evidence and citations  
 - **Conflict Records** — tracked unresolved and resolved discrepancies  
@@ -154,30 +182,35 @@ UnFoldAI is designed using a modular, layered architecture that balances usabili
 ### **External Systems**
 
 - **Perplexity** — live web research retrieval  
-- **OpenAI Files API** — document analysis and secure storage  
-- **Deepgram** — natural-sounding text-to-speech  
+- **OpenAI API** — embedding generation and LLM inference  
+- **Deepgram** — natural-sounding text-to-speech
 
 ---
 
 ### Why This Architecture ?
 Design Philosophy ~ “The agent should think deeply, but interact simply.”
 
-The architecture reflects three core objectives: reliability, controllability, and adaptive intelligence.
+The architecture reflects core objectives: reliability, controllability, contextual grounding, and adaptive intelligence.
 
-- **Layered separation ensures clarity of responsibility.**  
+- **Layered separation ensures clarity of responsibility.**
   The frontend manages interaction and presentation, the backend handles system logic, and LangGraph governs reasoning and action sequencing.
 
-- **Agentic orchestration supports decision-based workflows.**  
-  Instead of a single prompt-response loop, the orchestrator determines whether to answer, research, refine, or resolve conflicts—enabling iterative reasoning rather than single-turn output.
+- **Agentic orchestration supports decision-based workflows.**
+  Instead of a single prompt-response loop, the orchestrator determines whether to answer, **retrieve local context**, research, refine, or resolve conflicts—enabling iterative reasoning rather than single-turn output.
 
-- **Structured updates provide safe manipulation of persistent state.**  
-  The JSON protocol prevents unbounded text editing and enables deterministic updates to the account plan.
+- **Structured updates provide safe manipulation of persistent state.**
+   The JSON protocol prevents unbounded text editing and enables deterministic updates to the account plan.
 
-- **Stateful design enables context durability and reproducibility.**  
+- **Hybrid retrieval unifies internal and external knowledge.**
+  By combining FAISS for local document indexing and Perplexity for web research, the system grounds responses in both private user data and real-time market intelligence.
+
+- **Stateful design enables context durability and reproducibility.**
   Sessions, version history, conflicts, and sources are preserved, allowing the agent to perform multi-step analysis over time rather than reset on each request.
 
-- **Service modularity supports extensibility.**  
-  Search, speech, and file analysis are independent components, making the system adaptable and maintainable as capabilities evolve.
+- **Service modularity supports extensibility.**
+  Search, **vector retrieval**, speech, and file analysis are independent components, making the system adaptable and maintainable as capabilities evolve.
+
+
 ## ⚙️ Setup & Installation
 
 ### 1. Clone
